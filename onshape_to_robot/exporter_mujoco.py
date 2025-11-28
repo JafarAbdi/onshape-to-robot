@@ -131,13 +131,17 @@ class ExporterMuJoCo(Exporter):
                 if "forcerange" in joint.properties:
                     actuator += f'forcerange="-{joint.properties["forcerange"]} {joint.properties["forcerange"]}" '
 
-                joint_limits = joint.properties.get("limits", joint.limits)
-                limits_are_set = joint.properties.get("limits", False) != False
-                if joint_limits and (type == "position" or limits_are_set):
-                    if joint.properties.get("range", True) and type == "position":
-                        actuator += f'inheritrange="1" '
-                    else:
-                        actuator += f'ctrlrange="{joint_limits[0]} {joint_limits[1]}" '
+                if "ctrlrange" in joint.properties:
+                    ctrlrange = joint.properties["ctrlrange"]
+                    actuator += f'ctrlrange="{ctrlrange[0]} {ctrlrange[1]}" '
+                else:
+                    joint_limits = joint.properties.get("limits", joint.limits)
+                    limits_are_set = joint.properties.get("limits", False) != False
+                    if joint_limits and (type == "position" or limits_are_set):
+                        if joint.properties.get("range", True) and type == "position":
+                            actuator += f'inheritrange="1" '
+                        else:
+                            actuator += f'ctrlrange="{joint_limits[0]} {joint_limits[1]}" '
 
                 actuator += "/>"
                 self.append(actuator)
