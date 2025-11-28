@@ -135,6 +135,35 @@ This entry allows to override the equality attributes of the MuJoCo XML file. Th
 
 This can be used to adjust the ``solref`` and ``solimp`` attributes of the equality constraints.
 
+``joint_equalities`` *(default: [])*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This entry allows to define joint equality constraints in the MuJoCo XML file. Each entry is a dictionary of attributes that will be added to a ``<joint ... />`` element inside the ``<equality>`` section.
+
+Example:
+
+.. code-block:: javascript
+
+    "joint_equalities": [
+        {
+            "name": "gripper_coupling",
+            "joint1": "joint7",
+            "joint2": "joint8",
+            "polycoef": "0 1 0 0 0",
+            "solimp": "0.9 0.95 0.001",
+            "solref": "0.02 1"
+        }
+    ]
+
+This will produce:
+
+.. code-block:: xml
+
+    <equality>
+        <joint name="gripper_coupling" joint1="joint7" joint2="joint8"
+               polycoef="0 1 0 0 0" solimp="0.9 0.95 0.001" solref="0.02 1" />
+    </equality>
+
 ``additional_xml`` *(default: "")*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
