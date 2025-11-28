@@ -22,11 +22,13 @@ class ExporterMuJoCo(Exporter):
         self.materials: dict = {}
         self.equalities: dict = {}
         self.joint_equalities: list = []
+        self.contact_excludes: list = []
         self.body_condim: dict = {}
 
         if config is not None:
             self.equalities = self.config.get("equalities", {})
             self.joint_equalities = self.config.get("joint_equalities", [])
+            self.contact_excludes = self.config.get("contact_excludes", [])
             self.body_condim = self.config.get("body_condim", {})
             self.no_dynamics = config.no_dynamics
             additional_xml_file = config.get("additional_xml", None, required=False)
@@ -93,6 +95,9 @@ class ExporterMuJoCo(Exporter):
 
         # Adding equalities (loop closure)
         self.add_equalities(robot)
+
+        # Adding contact exclusions
+        self.add_contacts()
 
         self.append("</mujoco>")
 
@@ -190,6 +195,15 @@ class ExporterMuJoCo(Exporter):
             self.append(f"<joint {attrs} />")
 
         self.append("</equality>")
+
+    def add_contacts(self):
+        if not self.contact_excludes:
+            return
+
+        self.append("<contact>")
+        for exclude in self.contact_excludes:
+            self.append(f'<exclude body1="{exclude[0]}" body2="{exclude[1]}" />')
+        self.append("</contact>")
 
     def add_inertial(self, mass: float, com: np.ndarray, inertia: np.ndarray):
         # Ensuring epsilon masses and inertias
