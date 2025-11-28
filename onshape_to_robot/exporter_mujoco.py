@@ -358,6 +358,10 @@ class ExporterMuJoCo(Exporter):
         if joint_limits is not None and joint.properties.get("range", True):
             joint_xml += f'range="{joint_limits[0]} {joint_limits[1]}" '
 
+        if "actuatorfrcrange" in joint.properties:
+            actuatorfrcrange = joint.properties["actuatorfrcrange"]
+            joint_xml += f'actuatorfrcrange="{actuatorfrcrange[0]} {actuatorfrcrange[1]}" '
+
         for key in (
             "class",
             "frictionloss",
