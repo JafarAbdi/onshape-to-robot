@@ -3,7 +3,7 @@ import numpy as np
 import os
 import fnmatch
 from .message import success, warning, info
-from .robot import Robot, Link, Part, Joint, Closure
+from .robot import Robot, Link, Part, Joint, Closure, Camera
 from .config import Config
 from .geometry import Box, Cylinder, Sphere, Mesh, Shape
 from .exporter import Exporter
@@ -20,9 +20,12 @@ class ExporterMuJoCo(Exporter):
         self.additional_xml: str = ""
         self.meshes: list = []
         self.materials: dict = {}
+        self.equalities: dict = {}
+        self.body_condim: dict = {}
 
         if config is not None:
             self.equalities = self.config.get("equalities", {})
+            self.body_condim = self.config.get("body_condim", {})
             self.no_dynamics = config.no_dynamics
             additional_xml_file = config.get("additional_xml", None, required=False)
             if isinstance(additional_xml_file, str):
@@ -204,7 +207,14 @@ class ExporterMuJoCo(Exporter):
         inertial += " />"
         self.append(inertial)
 
-    def add_mesh(self, part: Part, class_: str, T_world_link: np.ndarray, mesh: Mesh):
+    def add_mesh(
+        self,
+        part: Part,
+        class_: str,
+        T_world_link: np.ndarray,
+        mesh: Mesh,
+        condim: int | None = None,
+    ):
         """
         Add a mesh node (e.g. STL) to the MuJoCo file
         """
@@ -219,6 +229,8 @@ class ExporterMuJoCo(Exporter):
         # Adding the geom node
         geom = f'<geom type="mesh" class="{class_}" '
         geom += self.pos_quat(T_link_part) + " "
+        if condim is not None:
+            geom += f'condim="{condim}" '
         geom += f'mesh="{xml_escape(mesh_file_no_ext)}" '
         geom += f'material="{xml_escape(material_name)}" '
         geom += " />"
@@ -230,7 +242,12 @@ class ExporterMuJoCo(Exporter):
         self.append(geom)
 
     def add_shape(
-        self, part: Part, class_: str, T_world_link: np.ndarray, shape: Shape
+        self,
+        part: Part,
+        class_: str,
+        T_world_link: np.ndarray,
+        shape: Shape,
+        condim: int | None = None,
     ):
         """
         Add pure shape geometry.
@@ -241,6 +258,9 @@ class ExporterMuJoCo(Exporter):
             np.linalg.inv(T_world_link) @ part.T_world_part @ shape.T_part_shape
         )
         geom += self.pos_quat(T_link_shape) + " "
+
+        if condim is not None:
+            geom += f'condim="{condim}" '
 
         if isinstance(shape, Box):
             geom += 'type="box" size="%g %g %g" ' % tuple(shape.size / 2)
@@ -260,7 +280,9 @@ class ExporterMuJoCo(Exporter):
         geom += " />"
         self.append(geom)
 
-    def add_geometries(self, part: Part, T_world_link: np.ndarray):
+    def add_geometries(
+        self, part: Part, T_world_link: np.ndarray, condim: int | None = None
+    ):
         """
         Add a part geometries
         """
@@ -268,13 +290,13 @@ class ExporterMuJoCo(Exporter):
             if shape.visual:
                 self.add_shape(part, "visual", T_world_link, shape)
             if shape.collision:
-                self.add_shape(part, "collision", T_world_link, shape)
+                self.add_shape(part, "collision", T_world_link, shape, condim)
 
         for mesh in part.meshes:
             if mesh.visual:
                 self.add_mesh(part, "visual", T_world_link, mesh)
             if mesh.collision:
-                self.add_mesh(part, "collision", T_world_link, mesh)
+                self.add_mesh(part, "collision", T_world_link, mesh, condim)
 
     def add_joint(self, joint: Joint):
         self.append(f"<!-- Joint from {joint.parent.name} to {joint.child.name} -->")
@@ -326,6 +348,13 @@ class ExporterMuJoCo(Exporter):
         site += " />"
         self.append(site)
 
+    def add_camera(self, camera: Camera, T_world_link: np.ndarray):
+        """
+        Add a camera element to the MuJoCo file.
+        """
+        T_link_camera = np.linalg.inv(T_world_link) @ camera.T_world_camera
+        self.append(f'<camera name="{camera.name}" {self.pos_quat(T_link_camera)} />')
+
     def add_link(
         self,
         robot: Robot,
@@ -360,14 +389,21 @@ class ExporterMuJoCo(Exporter):
         mass, com, inertia = link.get_dynamics(T_world_link)
         self.add_inertial(mass, com, inertia)
 
+        # Get condim for this body if configured
+        condim = self.body_condim.get(link.name)
+
         # Adding geometry objects
         for part in link.parts:
             self.append(f"<!-- Part {part.name} -->")
-            self.add_geometries(part, T_world_link)
+            self.add_geometries(part, T_world_link, condim)
 
         # Adding frames attached to current link
         for frame, T_world_frame in link.frames.items():
             self.add_frame(frame, T_world_link, T_world_frame, group=3)
+
+        # Adding cameras attached to current link
+        for camera in robot.get_link_cameras(link):
+            self.add_camera(camera, T_world_link)
 
         # Adding joints and children links
         for joint in robot.get_link_joints(link):
