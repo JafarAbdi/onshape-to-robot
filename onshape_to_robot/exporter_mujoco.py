@@ -112,7 +112,10 @@ class ExporterMuJoCo(Exporter):
             ):
                 type = joint.properties.get("type", "position")
                 actuator_class = joint.properties.get("class", self.default_class)
-                actuator: str = f'<{type} class="{actuator_class}" name="{joint.name}" joint="{joint.name}" '
+                actuator_name = joint.properties.get("actuator_name", joint.name)
+                actuator: str = (
+                    f'<{type} class="{actuator_class}" name="{actuator_name}" joint="{joint.name}" '
+                )
 
                 for key in "kp", "kv", "dampratio":
                     if key in joint.properties:
