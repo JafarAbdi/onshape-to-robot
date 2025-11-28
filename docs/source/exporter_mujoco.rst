@@ -87,6 +87,7 @@ Possible values are:
 
     * ``kp``, ``kv`` and ``dampratio`` gains
     * ``forcerange``
+    * ``ctrlrange``: explicit control range as ``[min, max]`` (e.g., ``[-1, 1]``), overrides automatic limit-based calculation
 
 ``equalities`` *(default: {})*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
