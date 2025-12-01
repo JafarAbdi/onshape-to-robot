@@ -22,12 +22,12 @@ class ExporterMuJoCo(Exporter):
         self.materials: dict = {}
         self.equalities: dict = {}
         self.contact_excludes: list = []
-        self.body_condim: dict = {}
+        self.body_properties: dict = {}
 
         if config is not None:
             self.equalities = self.config.get("equalities", {})
             self.contact_excludes = self.config.get("contact_excludes", [])
-            self.body_condim = self.config.get("body_condim", {})
+            self.body_properties = self.config.get("body_properties", {})
             self.no_dynamics = config.no_dynamics
             additional_xml_file = config.get("additional_xml", None, required=False)
             if isinstance(additional_xml_file, str):
@@ -160,6 +160,13 @@ class ExporterMuJoCo(Exporter):
 
         return ""
 
+    def get_body_properties(self, body_name: str) -> dict:
+        properties = self.body_properties.get("default", {})
+        for pattern, props in self.body_properties.items():
+            if fnmatch.fnmatch(body_name, pattern):
+                properties = {**properties, **props}
+        return properties
+
     def add_equalities(self, robot: Robot):
         self.append("<equality>")
         for closure in robot.closures:
@@ -204,7 +211,26 @@ class ExporterMuJoCo(Exporter):
             self.append(f'<exclude body1="{exclude[0]}" body2="{exclude[1]}" />')
         self.append("</contact>")
 
-    def add_inertial(self, mass: float, com: np.ndarray, inertia: np.ndarray):
+    def add_inertial(
+        self,
+        mass: float,
+        com: np.ndarray,
+        inertia: np.ndarray,
+        properties: dict | None = None,
+    ):
+        # Apply overrides from properties
+        if properties:
+            mass = properties.get("mass", mass)
+            if "pos" in properties:
+                com = np.array(properties["pos"])
+            if "fullinertia" in properties:
+                fi = properties["fullinertia"]
+                inertia = np.array([
+                    [fi[0], fi[3], fi[4]],
+                    [fi[3], fi[1], fi[5]],
+                    [fi[4], fi[5], fi[2]],
+                ])
+
         # Ensuring epsilon masses and inertias
         mass = max(1e-9, mass)
         inertia[0, 0] = max(1e-9, inertia[0, 0])
@@ -409,12 +435,15 @@ class ExporterMuJoCo(Exporter):
         else:
             self.add_joint(parent_joint)
 
+        # Get body properties for this link
+        body_props = self.get_body_properties(link.name)
+
         # Adding inertial properties
         mass, com, inertia = link.get_dynamics(T_world_link)
-        self.add_inertial(mass, com, inertia)
+        self.add_inertial(mass, com, inertia, body_props)
 
         # Get condim for this body if configured
-        condim = self.body_condim.get(link.name)
+        condim = body_props.get("condim")
 
         # Adding geometry objects
         for part in link.parts:
