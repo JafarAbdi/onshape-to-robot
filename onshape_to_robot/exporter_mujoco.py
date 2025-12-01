@@ -21,13 +21,11 @@ class ExporterMuJoCo(Exporter):
         self.meshes: list = []
         self.materials: dict = {}
         self.equalities: dict = {}
-        self.joint_equalities: list = []
         self.contact_excludes: list = []
         self.body_condim: dict = {}
 
         if config is not None:
             self.equalities = self.config.get("equalities", {})
-            self.joint_equalities = self.config.get("joint_equalities", [])
             self.contact_excludes = self.config.get("contact_excludes", [])
             self.body_condim = self.config.get("body_condim", {})
             self.no_dynamics = config.no_dynamics
@@ -193,10 +191,6 @@ class ExporterMuJoCo(Exporter):
                 self.append(
                     f'<joint joint1="{joint.name}" joint2="{joint.relation.source_joint}" polycoef="0 {joint.relation.ratio} 0 0 0" />'
                 )
-
-        for eq in self.joint_equalities:
-            attrs = " ".join(f'{k}="{v}"' for k, v in eq.items())
-            self.append(f"<joint {attrs} />")
 
         self.append("</equality>")
 
