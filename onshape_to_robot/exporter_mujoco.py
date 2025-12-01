@@ -146,12 +146,10 @@ class ExporterMuJoCo(Exporter):
 
         self.append("</actuator>")
 
-    def get_equality_attributes(self, closure: Closure) -> str:
+    def get_equality_attributes(self, name1: str, name2: str) -> str:
         all_attributes = {}
         for name, attributes in self.equalities.items():
-            if fnmatch.fnmatch(closure.frame1, name) and fnmatch.fnmatch(
-                closure.frame2, name
-            ):
+            if fnmatch.fnmatch(name1, name) or fnmatch.fnmatch(name2, name):
                 all_attributes.update(attributes)
 
         if len(all_attributes) > 0:
@@ -165,7 +163,7 @@ class ExporterMuJoCo(Exporter):
     def add_equalities(self, robot: Robot):
         self.append("<equality>")
         for closure in robot.closures:
-            attributes = self.get_equality_attributes(closure)
+            attributes = self.get_equality_attributes(closure.frame1, closure.frame2)
 
             if closure.closure_type == Closure.FIXED:
                 self.append(
@@ -188,8 +186,11 @@ class ExporterMuJoCo(Exporter):
 
         for joint in robot.joints:
             if joint.relation is not None:
+                attributes = self.get_equality_attributes(
+                    joint.relation.name, joint.relation.name
+                )
                 self.append(
-                    f'<joint joint1="{joint.name}" joint2="{joint.relation.source_joint}" polycoef="0 {joint.relation.ratio} 0 0 0" />'
+                    f'<joint name="{joint.relation.name}" joint1="{joint.name}" joint2="{joint.relation.source_joint}" polycoef="0 {joint.relation.ratio} 0 0 0" {attributes}/>'
                 )
 
         self.append("</equality>")

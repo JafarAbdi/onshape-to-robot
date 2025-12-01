@@ -86,9 +86,10 @@ class Relation:
     Represents a relation (for example a gear) with a source joint
     """
 
-    def __init__(self, source_joint: str, ratio: float):
+    def __init__(self, source_joint: str, ratio: float, name: str | None = None):
         self.source_joint: str = source_joint
         self.ratio: float = ratio
+        self.name: str | None = name
 
 
 class Joint:
