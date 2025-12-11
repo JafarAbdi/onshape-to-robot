@@ -136,31 +136,6 @@ This entry allows to override the equality attributes of the MuJoCo XML file. Th
 
 This can be used to adjust the ``solref`` and ``solimp`` attributes of the equality constraints.
 
-``contact_excludes`` *(default: [])*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This entry allows to define contact exclusions between bodies. Each entry is a list of two body names.
-
-Example:
-
-.. code-block:: javascript
-
-    "contact_excludes": [
-        ["link3", "link1"],
-        ["link2", "link4"],
-        ["link3", "link5"]
-    ]
-
-This will produce:
-
-.. code-block:: xml
-
-    <contact>
-        <exclude body1="link3" body2="link1" />
-        <exclude body1="link2" body2="link4" />
-        <exclude body1="link3" body2="link5" />
-    </contact>
-
 ``additional_xml`` *(default: "")*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
