@@ -79,7 +79,7 @@ class ExporterMuJoCo(Exporter):
 
         # Asset (mesh & materials)
         self.append("<asset>")
-        for mesh_file in sorted(self.meshes):
+        for mesh_file in sorted(set(self.meshes)):
             self.append(f'<mesh file="{mesh_file}" />')
         for material_name, color in sorted(self.materials.items()):
             color_str = "%g %g %g %g" % tuple(color)
